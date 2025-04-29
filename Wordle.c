@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <stdio.h>
+#include <locale.h>
 
 #define MAX_CHANCES 6 
 #define WORD_LENGTH 5 
@@ -13,6 +15,7 @@ void playGame();
 void checkGuess(const char* answer, const char* guess, char* result);
 
 int main() {
+    setlocale(LC_ALL, "en_US.UTF-8");
     char playAgain;
 
     srand(time(NULL));
