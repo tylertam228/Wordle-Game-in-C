@@ -2,17 +2,24 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <stdio.h>
 #include <locale.h>
+#include <stdbool.h>
+#include <ctype.h>
 
 #define MAX_CHANCES 6 
 #define WORD_LENGTH 5 
 #define WORD_FILE "words.txt"
 
+#define Red "\033[31m"
+#define Green "\033[32m"
+#define Yellow "\033[33m"
+#define Reset "\033[0m"
+
 void displayFrontPage();
 char* getRandomWord();
 void playGame();
 void checkGuess(const char* answer, const char* guess, char* result);
+bool isValidWord(const char* guess);
 
 int main() {
     setlocale(LC_ALL, "en_US.UTF-8");
@@ -25,9 +32,8 @@ int main() {
     do {
         playGame();
 
-        printf("One More Rround？(y/n): ");
+        printf("One More Round？(y/n): ");
         scanf(" %c", &playAgain);
-
     } while (playAgain == 'y' || playAgain == 'Y');
 
     printf("Thanks for Playing and Using the code by Tiger228! Goodbye!\n");
@@ -39,9 +45,9 @@ void displayFrontPage() {
     printf("        Welcome to Wordle Game       \n");
     printf("=====================================\n");
     printf("Rules：\n");
-    printf("    G：The letters are correct and in the correct position.\n");
-    printf("    Y: The letters are correct but in the wrong position.\n");
-    printf("    R: The letters are not in the word.\n");
+    printf("    %sG%s：The letters are correct and in the correct position.\n", Green, Reset);
+    printf("    %sY%s: The letters are correct but in the wrong position.\n", Yellow, Reset);
+    printf("    %sR%s: The letters are not in the word.\n", Red, Reset);
     printf("Enter a %d-letter word and press enter.\n", WORD_LENGTH);
     printf("=======================================\n");
 }
@@ -96,12 +102,10 @@ char* getRandomWord() {
 }
 
 void playGame() {
-    char answer[WORD_LENGTH + 1];
+    char* answer = getRandomWord();
     char guess[WORD_LENGTH + 1];
     char result[WORD_LENGTH + 1];
     int attempts = 0;
-
-    strcpy(answer, getRandomWord());
 
     printf("Game Start!\n");
 
@@ -109,18 +113,39 @@ void playGame() {
         printf("Guess %d：", attempts + 1);
         scanf("%s", guess);
 
+        // Convert guess to lowercase
+        for (int i = 0; guess[i]; i++) {
+            guess[i] = tolower(guess[i]);
+        }
+
         if (strlen(guess) != WORD_LENGTH) {
             printf("Please enter the Correct Length(5) of the Word!\n");
             continue;
         }
 
+        if (!isValidWord(guess)) {
+            printf("The word doesn't exist!\n");
+            continue;
+        }
+
         // Check and print the result
         checkGuess(answer, guess, result);
-        printf("%s\n", result);
+        for (int i = 0; i < WORD_LENGTH; i++) {
+            if (result[i] == 'G') {
+                printf("%s%c%s", Green, toupper(guess[i]), Reset);
+            } else if (result[i] == 'Y') {
+                printf("%s%c%s", Yellow, toupper(guess[i]), Reset);
+            } else {
+                printf("%s%c%s", Red, toupper(guess[i]), Reset);
+            }
+            printf(" ");
+        }
+        printf("\n");
 
         // Win
         if (strcmp(answer, guess) == 0) {
             printf("Congratulations on guessing it right! The answer is [%s]！\n", answer);
+            free(answer);
             return;
         }
 
@@ -129,6 +154,7 @@ void playGame() {
 
     // Lose
     printf("Sorry, you didn’t guess it! The answer is [%s].\n", answer);
+    free(answer);
 }
 
 void checkGuess(const char* answer, const char* guess, char* result) {
@@ -163,9 +189,24 @@ void checkGuess(const char* answer, const char* guess, char* result) {
     }
 }
 
-/**
- * Note: This program contains an intentional flaw that allows users to input non-existent words.
- * Unlike a standard Wordle game, which restricts inputs to existent words. 
- * This behavior can be tested by entering an non-existent word, and the program will still process it and provide a result.
- * I have chosen not to address this issue, as it adds an amusing quirk to the program's functionality.
- */
+bool isValidWord(const char* guess) {
+    FILE* file = fopen(WORD_FILE, "r");
+    if (!file) {
+        printf("Error: Unable to open file: %s\n", WORD_FILE);
+        exit(1); // Exit on file open error
+    }
+
+    char word[WORD_LENGTH + 2];
+    while (fgets(word, sizeof(word), file)) {
+        char* newline = strchr(word, '\n');
+        if (newline) {
+            *newline = '\0';
+        }
+        if (strcmp(word, guess) == 0) {
+            fclose(file);
+            return true;
+        }
+    }
+    fclose(file);
+    return false;
+}
